@@ -3,10 +3,15 @@ import { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import FormField from '../components/FormField';
 import Loader from '../components/Loader';
+import { photoProps } from './CreatePost';
 
-const RenderCards = ({ data, title}: { data: any, title: string}) => {
-  if(data?.length > 0) {
-    return data.map((post: any) => <Card key={post.id} {...post} />);
+const RenderCards = ({ data, title}: { data: photoProps[] | null, title: string}) => {
+  if(data && data?.length > 0) {
+    return (
+      <>
+        {data.map((post: photoProps) => <Card key={post._id} id={post._id!} name={post.name} prompt={post.prompt} photo={post.photo} />)}
+      </>
+    );
   }
 
   return <h2 className="mt-5 font-bold text-[#6449ff] text-xl uppercase">{title}</h2>;
@@ -14,8 +19,52 @@ const RenderCards = ({ data, title}: { data: any, title: string}) => {
 
 const Home = () => {
   const [loading, setLoading] = useState(false);
-  const [allPosts, setAllPosts] = useState(null);
+  const [allPosts, setAllPosts] = useState<null | photoProps[]>(null);
   const [searchText, setSearchText] = useState("");
+  const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
+  const [searchedResults, setSearchedResults] = useState<null | photoProps[]>(null);
+
+  useEffect(() => {
+    const fecthPost = async () => {
+      setLoading(true);
+
+      try {
+        const response = await fetch("http://localhost:8080/api/v1/post", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if(response.ok) {
+          const result = await response.json();
+
+          setAllPosts(result.data.reverse());
+        }
+      } catch (error) {
+        if( error instanceof Error) {
+          alert(error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fecthPost();
+  },[]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
+
+    setSearchTimeout(
+      setTimeout(() => {
+        const searchResults = allPosts ? allPosts.filter((item: photoProps) => item.name.toLowerCase().includes(searchText.toLowerCase()) || 
+        item.prompt.toLowerCase().includes(searchText.toLowerCase())) : null;
+  
+        setSearchedResults(searchResults);
+      }, 500)
+    )
+  };
 
   return (
     <section className="max-w-7xl mx-auto">
@@ -28,7 +77,14 @@ const Home = () => {
         </p>
       </div>
       <div className="mt-16">
-        {/* <FormField />           */}
+        <FormField 
+          labelName="Search posts"
+          type="text"
+          name="text"
+          placeholder="Search something..."
+          value={searchText}
+          handleChange={handleSearch}
+        />          
       </div>
       <div className="mt-10">
         {
@@ -46,12 +102,12 @@ const Home = () => {
               <div className="grid lg:grid-cols-4 sm:grid-cols-3 xs:grid-cols-2 grid-cols-1 gap-3">
                 {searchText ? (
                   <RenderCards
-                    data={[]} //"searchedResults"
+                    data={searchedResults}
                     title="No search results found"
                   />
                 ) : (
                   <RenderCards
-                    data={[]} //"allPosts"
+                    data={allPosts}
                     title="No posts found"
                   />
                 )}

@@ -6,6 +6,12 @@ import FormField from '../components/FormField';
 import Loader from '../components/Loader';
 import { getRandomPrompt } from '../utils';
 
+export type photoProps = {
+  _id?: string,
+  name: string,
+  prompt: string,
+  photo: string,
+}
 const CreatePost = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -34,12 +40,63 @@ const CreatePost = () => {
     });
   };
 
-  const generateImg = () => {
+  const generateImg = async () => {
+    if(form.prompt) {
+      try {
+        setGeneratingImg(true);
+        const response = await fetch("http://localhost:8080/api/v1/dalle", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: form.prompt }),
+        });
 
+        const data = await response.json();
+
+        setForm({
+          ...form,
+          photo: `data:image/jpeg;base64,${data.photo}`
+        })
+      } catch (error) {
+        if( error instanceof Error) {
+          alert(error);
+        }
+      } finally {
+        setGeneratingImg(false);
+      }
+    } else {
+      alert("Please enter a prompt!")
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if(form.prompt && form.photo) {
+      setLoading(true);
+
+      try {
+        const response = await fetch("http://localhost:8080/api/v1/post", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        });
+  
+        await response.json();
+        navigate("/");
+      } catch (error) {
+        if( error instanceof Error) {
+          alert(error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      alert("Please enter a prompt and generate your image!")
+    }
   };
 
   return (
