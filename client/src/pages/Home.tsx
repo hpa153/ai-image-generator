@@ -54,6 +54,10 @@ const Home = () => {
   },[]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if(searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
     setSearchText(e.target.value);
 
     setSearchTimeout(
